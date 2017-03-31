@@ -1,127 +1,113 @@
-var express = require('express');
-var fs = require('fs');
+const NodeCache = require('node-cache');
+const myCache = new NodeCache({ stdTTL: 600, checkperiod: 620 });
 
-var request = require('request');
-var cheerio = require('cheerio');
-var app = express();
+const express = require('express');
+const Promise = require('bluebird');
 
-app.get('/scrape/:mountain', function (req, res) {
-    var mountain = req.params.mountain;
+const request = require('request');
+const cheerio = require('cheerio');
+const app = express();
 
-    url = `http://www.snow-forecast.com/resorts/${mountain}/6day/mid`;
-    var weatherData = null;
-    request(url, function (error, response, html) {
-        console.log('requesting :' + url);
-        if (error) {
-            console.log("error making Reuest to :" + url);
-        }
+myCache.on('set', function (key, value) {
+    console.log("Cache-Add: " + key + ": " + value);
+});
+myCache.on('del', function (key, value) {
+    console.log("Cache-Del: " + key + ": " + value);
+});
+myCache.on('expired', function (key, value) {
+    console.log("Cache-Expired: " + key + ": " + value);
+});
 
-        var $ = cheerio.load(html);
-        var createWeatherData = function (dayNodes, timeNodes, snowNodes, rainNodes, tempNodes) {
-            var resultObject = { name: `${mountain}`, days: [] };
-            dayNodes.each(function (i, day) {
-                resultObject.days.push({ name: $(day).text(), times: null, snows: null, rains: null, maxTemps: null });
-            });
+const mountainList = [
+    'Cypress-Mountain',
+    'Whistler-Blackcomb'
+];
 
-            addTimedNodes(timeNodes, resultObject, 'times');
-            addTimedNodes(snowNodes, resultObject, 'snows');
-            addTimedNodes(rainNodes, resultObject, 'rains');
-            addTimedNodes(tempNodes, resultObject, 'maxTemps');
-            return resultObject;
-        }
-
-        var addTimedNodes = function (dataTable, resultObject, variableName) {
-            var tempObj = [];
-            dataTable.each(function (j, item) {
-                var text = $(item).text();
-                tempObj.push(text);
-                if (dataTable.length % 3 == 0 && (j + 1) % 3 == 0) {
-                    // normal flow...
-                    (resultObject.days[((j + 1) / 3) - 1])[variableName] = tempObj;
-                    tempObj = [];
-                }
-                else if (dataTable.length + 1 % 3 == 0 && (j + 2) % 3 == 0) {
-                    // missing AM
-                    (resultObject.days[((j + 2) / 3) - 1])[variableName] = tempObj;
-                    tempObj = [];
-                }
-                else if (dataTable.length + 2 % 3 == 0 && (j + 3) % 3 == 0) {
-                    // missing AM+PM
-                    (resultObject.days[((j + 3) / 3) - 1])[variableName] = tempObj;
-                    tempObj = [];
-                }
-            });
-        };
-        var days, times, snow, rain, temp, freezeLevel;
-        var json = {
-            days: {
-                name: '',
-                times: {
-
-                },
-                snow: {
-
-                },
-                rain: {
-
-                },
-                temp: {
-
-                },
-                freezeLevel: {
-
-                }
+const performScrape = function (mountain) {
+    return new Promise(function (resolve, reject) {
+        const url = `http://www.snow-forecast.com/resorts/${mountain}/6day/mid`;;
+        request(url, function (error, response, html) {
+            console.log('requesting :' + url);
+            if (error) {
+                console.log("error making Reuest to :" + url);
+                reject(error);
             }
-        };
-        $('.forecasts').filter(function () {
-            var data = $(this);
-            var test = data.children('.lar');
-            var daysTable = test.first();
-            var timesTable = daysTable.next();
-            var snowtable = timesTable.nextUntil('.lar').next('.lar');
-            var rainTable = snowtable.next();
-            var tempTable = rainTable.next();
 
-            days = daysTable.find('td');
-            days.each(function (i, day) {
-                console.log("node: " + i, $(day).text());
+            var $ = cheerio.load(html);
+            const createWeatherData = function (dayNodes, timeNodes, snowNodes, rainNodes, tempNodes) {
+                var resultObject = { name: `${mountain}`, days: [] };
+                dayNodes.each(function (i, day) {
+                    resultObject.days.push({ name: $(day).text(), times: null, snows: null, rains: null, maxTemps: null });
+                });
+
+                addTimedNodes(timeNodes, resultObject, 'times');
+                addTimedNodes(snowNodes, resultObject, 'snows');
+                addTimedNodes(rainNodes, resultObject, 'rains');
+                addTimedNodes(tempNodes, resultObject, 'maxTemps');
+                return resultObject;
+            }
+
+            const addTimedNodes = function (dataTable, resultObject, variableName) {
+                var tempObj = [];
+                dataTable.each(function (j, item) {
+                    var text = $(item).text();
+                    tempObj.push(text);
+                    if (dataTable.length % 3 == 0 && (j + 1) % 3 == 0) {
+                        // normal flow...
+                        (resultObject.days[((j + 1) / 3) - 1])[variableName] = tempObj;
+                        tempObj = [];
+                    }
+                    else if (dataTable.length + 1 % 3 == 0 && (j + 2) % 3 == 0) {
+                        // missing AM
+                        (resultObject.days[((j + 2) / 3) - 1])[variableName] = tempObj;
+                        tempObj = [];
+                    }
+                    else if (dataTable.length + 2 % 3 == 0 && (j + 3) % 3 == 0) {
+                        // missing AM+PM
+                        (resultObject.days[((j + 3) / 3) - 1])[variableName] = tempObj;
+                        tempObj = [];
+                    }
+                });
+            };
+            $('.forecasts').filter(function () {
+                const data = $(this);
+                const test = data.children('.lar');
+                const daysTable = test.first();
+                const timesTable = daysTable.next();
+                const snowtable = timesTable.nextUntil('.lar').next('.lar');
+                const rainTable = snowtable.next();
+                const tempTable = rainTable.next();
+
+                const days = daysTable.find('td');
+                const times = timesTable.find('td');
+                const snows = snowtable.find('td');
+                const rains = rainTable.find('td');
+                const temps = tempTable.find('td');
+
+                resolve(createWeatherData(days, times, snows, rains, temps));
             });
-            console.log('---------------------');
-            times = timesTable.find('td');
-            times.each(function (i, time) {
-                // console.log("node: " + i, $(time).text());
-            });
-            console.log('---------------------');
-            snows = snowtable.find('td');
-            // console.log('typeof snows:', typeof (snowtable));
-            // console.log('is snow filled?', !!snowtable);
-            // console.log('snow length:', snowtable.length);
-            snows.each(function (i, snow) {
-                // console.log("node: " + i, $(snow).text());
-            });
-            console.log('---------------------');
-            rains = rainTable.find('td');
-            // console.log('typeof rains:', typeof (rainTable));
-            // console.log('is rains filled?', !!rainTable);
-            // console.log('rains length:', rainTable.length);
-            rains.each(function (i, snow) {
-                // console.log("node: " + i, $(snow).text());
-            });
-            console.log('---------------------');
-            temps = tempTable.find('td');
-            temps.each(function (i, snow) {
-                // console.log("node: " + i, $(snow).text());
-            });
-            // console.log(JSON.stringify());
-            weatherData = createWeatherData(days, times, snows, rains, temps);
-            res.json(weatherData);
+
         });
-
-        // testdata = $('forecasts').contents();
     });
-    // res.json('broken');
-    // res.send(testdata);
-    // res.send('hi');
+};
+
+app.get('/api/:mountain', function (req, res) {
+    const mountain = req.params.mountain;
+    if (mountainList.find(function (elem) { return elem == mountain; }) == undefined) {
+        res.status(500).send('Invalid Mountain');
+        return;
+    }
+    const result = myCache.get(mountain);
+    if (result != undefined) {
+        console.log('-------------------CACHED----------------------');
+        res.json(result);
+    } else {
+        performScrape(mountain).then(function (data) {
+            console.log('-------------------FRESH----------------------');
+            myCache.set(mountain, data);
+            res.json(data);
+        });
+    }
 });
 
 app.listen('8081', function () {
