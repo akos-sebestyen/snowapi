@@ -25,7 +25,7 @@ const mountainList = [
 
 const performScrape = function (mountain) {
     return new Promise(function (resolve, reject) {
-        const url = `http://www.snow-forecast.com/resorts/${mountain}/6day/mid`;;
+        const url = `http://www.snow-forecast.com/resorts/${mountain}/6day/mid`;
         request(url, function (error, response, html) {
             console.log('requesting :' + url);
             if (error) {
