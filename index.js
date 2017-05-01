@@ -93,7 +93,7 @@ const performScrape = function (mountain) {
 
 app.get('/api/:mountain', function (req, res) {
     const mountain = req.params.mountain;
-    if (mountainList.find(function (elem) { return elem.toLowerCase() == mountain; }) == undefined) {
+    if (mountainList.find(function (elem) { return elem == mountain.toLowerCase(); }) == undefined) {
         res.status(500).send('Invalid Mountain');
         return;
     }
