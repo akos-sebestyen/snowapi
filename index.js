@@ -19,8 +19,8 @@ myCache.on('expired', function (key, value) {
 });
 
 const mountainList = [
-    'Cypress-Mountain',
-    'Whistler-Blackcomb'
+    'cypress-mountain',
+    'whistler-blackcomb'
 ];
 
 const performScrape = function (mountain) {
@@ -29,7 +29,7 @@ const performScrape = function (mountain) {
         request(url, function (error, response, html) {
             console.log('requesting :' + url);
             if (error) {
-                console.log("error making Reuest to :" + url);
+                console.log("error making Request to :" + url);
                 reject(error);
             }
 
@@ -93,7 +93,7 @@ const performScrape = function (mountain) {
 
 app.get('/api/:mountain', function (req, res) {
     const mountain = req.params.mountain;
-    if (mountainList.find(function (elem) { return elem == mountain; }) == undefined) {
+    if (mountainList.find(function (elem) { return elem.toLowerCase() == mountain; }) == undefined) {
         res.status(500).send('Invalid Mountain');
         return;
     }
