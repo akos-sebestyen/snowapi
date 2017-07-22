@@ -121,8 +121,8 @@ app.get('/api/:mountain', function (req, res) {
         });
     }
 });
-
-app.listen('8081', function () {
-    console.log('server listening on :8081');
+var port = process.env.PORT || 8081;
+app.listen(port, function () {
+    console.log('server listening on :'+port);
 });
 
