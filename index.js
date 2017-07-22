@@ -1,5 +1,6 @@
 const NodeCache = require('node-cache');
 const myCache = new NodeCache({ stdTTL: 600, checkperiod: 620 });
+const path = require('path');
 
 const express = require('express');
 const Promise = require('bluebird');
@@ -101,7 +102,7 @@ const performScrape = function (mountain) {
         });
     });
 };
-
+app.use(express.static(path.join(__dirname, 'client')));
 app.get('/api/:mountain', function (req, res) {
     const mountain = req.params.mountain;
     if (mountainList.find(function (elem) { return elem == mountain.toLowerCase(); }) == undefined) {
