@@ -19,8 +19,17 @@ myCache.on('expired', function (key, value) {
 });
 
 const mountainList = [
+    'whistler-blackcomb',
+    'apex',
+    'big-white',
     'cypress-mountain',
-    'whistler-blackcomb'
+    'fernie',
+    'kicking-horse',
+    'manning-park-resort',
+    'mount-washington',
+    'silver-star',
+    'sun-peaks',
+    'revelstoke'
 ];
 
 const performScrape = function (mountain) {
@@ -37,13 +46,13 @@ const performScrape = function (mountain) {
             const createWeatherData = function (dayNodes, timeNodes, snowNodes, rainNodes, tempNodes) {
                 var resultObject = { name: `${mountain}`, days: [] };
                 dayNodes.each(function (i, day) {
-                    resultObject.days.push({ name: $(day).text(), times: null, snows: null, rains: null, maxTemps: null });
+                    resultObject.days.push({ name: $(day).text(), time: null, snow: null, rain: null, temp: null });
                 });
 
-                addTimedNodes(timeNodes, resultObject, 'times');
-                addTimedNodes(snowNodes, resultObject, 'snows');
-                addTimedNodes(rainNodes, resultObject, 'rains');
-                addTimedNodes(tempNodes, resultObject, 'maxTemps');
+                addTimedNodes(timeNodes, resultObject, 'time');
+                addTimedNodes(snowNodes, resultObject, 'snow');
+                addTimedNodes(rainNodes, resultObject, 'rain');
+                addTimedNodes(tempNodes, resultObject, 'temp');
                 return resultObject;
             }
 
@@ -52,6 +61,8 @@ const performScrape = function (mountain) {
                 dataTable.each(function (j, item) {
                     var text = $(item).text();
                     tempObj.push(text);
+                    // console.log(dataTable.length);
+                    // console.log(j.length);
                     if (dataTable.length % 3 == 0 && (j + 1) % 3 == 0) {
                         // normal flow...
                         (resultObject.days[((j + 1) / 3) - 1])[variableName] = tempObj;
