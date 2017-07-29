@@ -18,6 +18,14 @@ myCache.on('del', function (key, value) {
 myCache.on('expired', function (key, value) {
     console.log("Cache-Expired: " + key + ": " + value);
 });
+const wwwRedirect = function (req, res, next) {
+    if (req.headers.host.slice(0, 4) === 'www.') {
+        var newHost = req.headers.host.slice(4);
+        return res.redirect(301, req.protocol + '://' + newHost + req.originalUrl);
+    }
+    next();
+};
+
 
 const mountainList = [
     'whistler-blackcomb',
@@ -103,6 +111,8 @@ const performScrape = function (mountain) {
     });
 };
 app.use(express.static(path.join(__dirname, 'client')));
+app.set('trust proxy', true);
+app.use(wwwRedirect);
 app.get('/api/:mountain', function (req, res) {
     const mountain = req.params.mountain;
     if (mountainList.find(function (elem) { return elem == mountain.toLowerCase(); }) == undefined) {
@@ -123,6 +133,6 @@ app.get('/api/:mountain', function (req, res) {
 });
 var port = process.env.PORT || 8081;
 app.listen(port, function () {
-    console.log('server listening on :'+port);
+    console.log('server listening on :' + port);
 });
 
